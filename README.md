@@ -1,2 +1,2 @@
-# pygan
+# PyGAN
 upcoming project
