@@ -129,3 +129,9 @@ dmypy.json
 .pyre/
 
 dcgan/data/MNIST/raw/
+
+datasets/MNIST/raw/
+
+dcgan/outputs/checkpoints/
+
+dcgan/outputs/images/

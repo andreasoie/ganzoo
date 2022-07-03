@@ -7,6 +7,17 @@ from typing import List, Tuple
 import torch
 
 
+def initialize_weights(
+    model: torch.nn.Module, mean: float = 0, std: float = 0.02
+) -> None:
+    for module in model.modules():
+        if isinstance(module, (torch.nn.Conv2d, torch.nn.ConvTranspose2d)):
+            module.weight.data.normal_(mean=mean, std=std)
+        elif isinstance(module, torch.nn.BatchNorm2d):
+            module.weight.data.normal_(mean=1.0, std=std)
+            module.bias.data.zero_()
+
+
 def get_channel_sizes(image_shape: Tuple[int], reverse: bool = False) -> List[int]:
     assert image_shape[1] == image_shape[2], "Image must be square"
     output_channels = [
@@ -24,11 +35,7 @@ def get_channel_sizes(image_shape: Tuple[int], reverse: bool = False) -> List[in
 class Generator(torch.nn.Module):
     """Upsamples by uses fractionally-strided convolutions"""
 
-    def __init__(
-        self,
-        latent_dimensions: int,
-        image_shape: Tuple[int],
-    ) -> None:
+    def __init__(self, latent_dimensions: int, image_shape: Tuple[int]) -> None:
         super().__init__()
         self.output_channels = get_channel_sizes(image_shape)
         self.conv1 = torch.nn.Sequential(
@@ -41,8 +48,9 @@ class Generator(torch.nn.Module):
                 bias=False,
             ),
             torch.nn.BatchNorm2d(num_features=self.output_channels[0]),
-            torch.nn.ReLU(),
+            torch.nn.ReLU(inplace=True),
         )
+        self.DEBUG = False
 
         self.conv2 = torch.nn.Sequential(
             torch.nn.ConvTranspose2d(
@@ -54,7 +62,7 @@ class Generator(torch.nn.Module):
                 bias=False,
             ),
             torch.nn.BatchNorm2d(num_features=self.output_channels[1]),
-            torch.nn.ReLU(),
+            torch.nn.ReLU(inplace=True),
         )
 
         self.conv3 = torch.nn.Sequential(
@@ -67,7 +75,7 @@ class Generator(torch.nn.Module):
                 bias=False,
             ),
             torch.nn.BatchNorm2d(num_features=self.output_channels[2]),
-            torch.nn.ReLU(),
+            torch.nn.ReLU(inplace=True),
         )
 
         self.conv4 = torch.nn.Sequential(
@@ -80,7 +88,7 @@ class Generator(torch.nn.Module):
                 bias=False,
             ),
             torch.nn.BatchNorm2d(num_features=self.output_channels[3]),
-            torch.nn.ReLU(),
+            torch.nn.ReLU(inplace=True),
         )
 
         self.conv5 = torch.nn.Sequential(
@@ -95,7 +103,7 @@ class Generator(torch.nn.Module):
             torch.nn.Tanh(),
         )
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         out = self.conv1(x)
         out = self.conv2(out)
         out = self.conv3(out)
@@ -119,7 +127,7 @@ class Discriminator(torch.nn.Module):
                 padding=1,
                 bias=False,
             ),
-            torch.nn.LeakyReLU(negative_slope=0.2),
+            torch.nn.LeakyReLU(negative_slope=0.2, inplace=True),
         )
 
         self.conv2 = torch.nn.Sequential(
@@ -132,7 +140,7 @@ class Discriminator(torch.nn.Module):
                 bias=False,
             ),
             torch.nn.BatchNorm2d(num_features=self.output_channels[2]),
-            torch.nn.LeakyReLU(negative_slope=0.2),
+            torch.nn.LeakyReLU(negative_slope=0.2, inplace=True),
         )
 
         self.conv3 = torch.nn.Sequential(
@@ -145,7 +153,7 @@ class Discriminator(torch.nn.Module):
                 bias=False,
             ),
             torch.nn.BatchNorm2d(num_features=self.output_channels[3]),
-            torch.nn.LeakyReLU(negative_slope=0.2),
+            torch.nn.LeakyReLU(negative_slope=0.2, inplace=True),
         )
 
         self.conv4 = torch.nn.Sequential(
@@ -158,7 +166,7 @@ class Discriminator(torch.nn.Module):
                 bias=False,
             ),
             torch.nn.BatchNorm2d(num_features=self.output_channels[4]),
-            torch.nn.LeakyReLU(negative_slope=0.2),
+            torch.nn.LeakyReLU(negative_slope=0.2, inplace=True),
         )
         self.conv5 = torch.nn.Sequential(
             torch.nn.Conv2d(
@@ -171,52 +179,33 @@ class Discriminator(torch.nn.Module):
             ),
             torch.nn.Sigmoid(),
         )
+        self.DEBUG = False
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         out = self.conv1(x)
         out = self.conv2(out)
         out = self.conv3(out)
         out = self.conv4(out)
         out = self.conv5(out)
-        return out
+        return out.view(-1, 1).squeeze(1)  # (64, 1, 1, 1) to (64)
 
 
 class DCGAN(torch.nn.Module):
     def __init__(self) -> None:
         super().__init__()
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         pass
 
 
 if __name__ == "__main__":
 
-    latent_dimensions = 100
-    image_shape = (1, 28, 28)
+    BS = 64
+    z_dim = 100
+    image_shape = (1, 64, 64)
 
-    generator = Generator(latent_dimensions=latent_dimensions, image_shape=image_shape)
-    disriminator = Discriminator(image_shape=image_shape)
+    generator = Generator(latent_dimensions=z_dim, image_shape=image_shape)
+    discriminator = Discriminator(image_shape=image_shape)
 
-    test_input = torch.rand(1, latent_dimensions, 1, 1)
-    output = generator(test_input)
-    output = disriminator(output)
-
-    """
-    when
-        image shape (1, 28, 28)
-
-    then:
-        [0] =  torch.Size([1, 100, 1, 1])
-        [1] =  torch.Size([1, 224, 4, 4])
-        [2] =  torch.Size([1, 112, 8, 8])
-        [3] =  torch.Size([1, 56, 16, 16])
-        [4] =  torch.Size([1, 28, 32, 32])
-        [5] =  torch.Size([1, 1, 64, 64])
-
-        [5] =  torch.Size([1, 1, 64, 64])
-        [4] =  torch.Size([1, 28, 32, 32])
-        [3] =  torch.Size([1, 56, 16, 16])
-        [2] =  torch.Size([1, 112, 8, 8])
-        [1] =  torch.Size([1, 224, 4, 4])
-        [0] =  torch.Size([1, 1, 1, 1])
-    """
+    initialize_weights(generator)
+    initialize_weights(discriminator)
