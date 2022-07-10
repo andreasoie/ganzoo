@@ -1,10 +1,7 @@
-"""
-DCAN from scratch
-"""
-
 from typing import List, Tuple
 
 import torch
+from torch import nn
 
 
 def initialize_weights(
@@ -18,7 +15,7 @@ def initialize_weights(
             module.bias.data.zero_()
 
 
-def get_channel_sizes(image_shape: Tuple[int], reverse: bool = False) -> List[int]:
+def _get_channel_sizes(image_shape: Tuple[int], reverse: bool = False) -> List[int]:
     assert image_shape[1] == image_shape[2], "Image must be square"
     output_channels = [
         8 * image_shape[1],
@@ -33,11 +30,9 @@ def get_channel_sizes(image_shape: Tuple[int], reverse: bool = False) -> List[in
 
 
 class Generator(torch.nn.Module):
-    """Upsamples by uses fractionally-strided convolutions"""
-
     def __init__(self, latent_dimensions: int, image_shape: Tuple[int]) -> None:
         super().__init__()
-        self.output_channels = get_channel_sizes(image_shape)
+        self.output_channels = _get_channel_sizes(image_shape)
         self.conv1 = torch.nn.Sequential(
             torch.nn.ConvTranspose2d(
                 in_channels=latent_dimensions,
@@ -50,7 +45,6 @@ class Generator(torch.nn.Module):
             torch.nn.BatchNorm2d(num_features=self.output_channels[0]),
             torch.nn.ReLU(inplace=True),
         )
-        self.DEBUG = False
 
         self.conv2 = torch.nn.Sequential(
             torch.nn.ConvTranspose2d(
@@ -113,11 +107,9 @@ class Generator(torch.nn.Module):
 
 
 class Discriminator(torch.nn.Module):
-    """Downsampled by uses convolutions"""
-
     def __init__(self, image_shape: Tuple[int]) -> None:
         super().__init__()
-        self.output_channels = get_channel_sizes(image_shape, reverse=True)
+        self.output_channels = _get_channel_sizes(image_shape, reverse=True)
         self.conv1 = torch.nn.Sequential(
             torch.nn.Conv2d(
                 in_channels=self.output_channels[0],
@@ -179,7 +171,6 @@ class Discriminator(torch.nn.Module):
             ),
             torch.nn.Sigmoid(),
         )
-        self.DEBUG = False
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         out = self.conv1(x)
@@ -187,25 +178,5 @@ class Discriminator(torch.nn.Module):
         out = self.conv3(out)
         out = self.conv4(out)
         out = self.conv5(out)
-        return out.view(-1, 1).squeeze(1)  # (64, 1, 1, 1) to (64)
-
-
-class DCGAN(torch.nn.Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        pass
-
-
-if __name__ == "__main__":
-
-    BS = 64
-    z_dim = 100
-    image_shape = (1, 64, 64)
-
-    generator = Generator(latent_dimensions=z_dim, image_shape=image_shape)
-    discriminator = Discriminator(image_shape=image_shape)
-
-    initialize_weights(generator)
-    initialize_weights(discriminator)
+        out = out.view(-1, 1).squeeze(1)
+        return out
