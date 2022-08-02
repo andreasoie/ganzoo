@@ -1,4 +1,4 @@
 # The GAN Zoo
 
-*A repository showcasing various quality GAN implemetantions from scratch, using PyTorch.*
+*A repository showcasing various quality GAN implementations from scratch, using PyTorch.*
 
