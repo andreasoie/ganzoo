@@ -17,4 +17,3 @@
 
 #### References
 - [Article](https://arxiv.org/pdf/1411.1784.pdf)
-- [IMG/Architecture](https://debuggercafe.com/wp-content/uploads/2020/07/dcgan_overall.png)
