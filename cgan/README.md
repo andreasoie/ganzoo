@@ -5,7 +5,6 @@
 
 #### Reading Notes
 - General
-  - Uses conditioning to generate spesific images
   - Uses a joint hidden representation of noise and a condition variable vector to generate images
 - Generator
   - MLP architecture
