@@ -132,8 +132,7 @@ dcgan/data/MNIST/raw/
 
 datasets/MNIST/raw/
 
-dcgan/outputs/checkpoints/
-
-dcgan/outputs/images/
-
+dcgan/outputs/
+cgan/outputs/
 dcgan/out/
+cgan/out/
